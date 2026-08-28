@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quanto vale a sua redação?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.anthropic.com">
+<link rel="dns-prefetch" href="https://api.anthropic.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --paper:#F7F3E8;
+    --paper-line: rgba(94,122,156,.16);
+    --paper-margin: rgba(179,38,30,.28);
+    --ink:#202B3B;
+    --ink-soft:#5B6B80;
+    --red:#B3261E;
+    --red-dark:#8C1D17;
+    --red-soft:#F5DBD8;
+    --good:#2F6F5E;
+    --good-soft:#DCEDE7;
+    --surface:#FFFFFF;
+    --shadow: rgba(32,43,59,.12);
+    --font-display:'Source Serif 4', Georgia, serif;
+    --font-hand:'Kalam', cursive;
+    --font-body:'Inter', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(90deg, transparent 0 46px, var(--paper-margin) 46px 47px, transparent 47px 100%),
+      repeating-linear-gradient(var(--paper) 0 31px, var(--paper-line) 31px 32px),
+      var(--paper);
+    font-family: var(--font-body);
+    color: var(--ink);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{max-width:640px;margin:0 auto;padding:36px 22px 70px;min-height:100vh;}
+  .eyebrow{
+    font-family:var(--font-hand);
+    color:var(--red);
+    font-size:19px;
+    transform:rotate(-2deg);
+    display:inline-block;
+    margin-bottom:6px;
+  }
+  h1{font-family:var(--font-display);font-weight:700;font-size:34px;line-height:1.15;margin:0 0 14px;color:var(--ink);}
+  h2{font-family:var(--font-display);font-weight:600;font-size:24px;margin:0 0 10px;color:var(--ink);}
+  p.lead{color:var(--ink-soft);font-size:16px;line-height:1.55;margin:0 0 26px;}
+  .card{
+    background:var(--surface);
+    border-radius:14px;
+    box-shadow:0 10px 30px var(--shadow);
+    padding:24px;
+  }
+  .btn{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:15.5px;
+    border:none;
+    border-radius:10px;
+    padding:15px 22px;
+    cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease;
+    width:100%;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--red);color:#fff;box-shadow:0 8px 20px rgba(179,38,30,.28);}
+  .btn-primary:hover{background:var(--red-dark);}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1.5px solid #DCD5C4;}
+  .progress-wrap{display:flex;gap:6px;margin-bottom:28px;}
+  .progress-seg{height:5px;flex:1;background:#E5DFCF;border-radius:3px;overflow:hidden;}
+  .progress-seg > div{height:100%;background:var(--red);width:0%;transition:width .4s ease;}
+  .qnum{font-family:var(--font-hand);color:var(--ink-soft);font-size:16px;margin-bottom:6px;}
+  .option{
+    display:block;width:100%;text-align:left;
+    background:var(--surface);border:1.5px solid #E5DFCF;border-radius:12px;
+    padding:16px 18px;margin-bottom:10px;font-size:15.5px;color:var(--ink);
+    cursor:pointer;transition:border-color .15s ease, background .15s ease;
+    font-family:var(--font-body);
+  }
+  .option:hover{border-color:var(--red);background:#FFF9F8;}
+  .stamp-wrap{display:flex;justify-content:center;margin:6px 0 24px;}
+  .stamp{
+    width:150px;height:150px;border-radius:50%;
+    border:4px solid var(--red);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transform:rotate(-8deg);
+    font-family:var(--font-display);
+    color:var(--red);
+    box-shadow:0 0 0 3px rgba(179,38,30,.08);
+  }
+  .stamp .n{font-size:40px;font-weight:700;line-height:1;}
+  .stamp .d{font-family:var(--font-hand);font-size:14px;margin-top:2px;}
+  .checklist{list-style:none;padding:0;margin:22px 0;}
+  .checklist li{
+    display:flex;align-items:center;gap:10px;padding:10px 0;
+    color:var(--ink-soft);font-size:15px;
+    opacity:0;animation:fadeIn .5s ease forwards;
+  }
+  .checklist li:nth-child(1){animation-delay:.2s;}
+  .checklist li:nth-child(2){animation-delay:1s;}
+  .checklist li:nth-child(3){animation-delay:1.8s;}
+  .checklist li .dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--good);flex:none;position:relative;}
+  .checklist li .dot::after{content:'';position:absolute;left:5px;top:2px;width:5px;height:9px;border:solid var(--good);border-width:0 2px 2px 0;transform:rotate(45deg);}
+  @keyframes fadeIn{to{opacity:1;}}
+  textarea, input[type=text]{
+    width:100%;font-family:var(--font-body);font-size:15.5px;color:var(--ink);
+    border:1.5px solid #E5DFCF;border-radius:10px;padding:14px;
+    background:#FFFEFB;resize:vertical;
+  }
+  textarea{min-height:260px;line-height:1.7;}
+  label.field-label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 6px;}
+  .word-count{font-size:13px;color:var(--ink-soft);margin-top:6px;text-align:right;}
+  .word-count.ok{color:var(--good);}
+  .pen-loader{display:flex;flex-direction:column;align-items:center;padding:60px 20px;}
+  .pen-emoji{font-size:44px;animation:wiggle 1s ease-in-out infinite;}
+  @keyframes wiggle{0%,100%{transform:rotate(-8deg);}50%{transform:rotate(8deg);}}
+  .loading-msg{font-family:var(--font-hand);font-size:19px;color:var(--ink-soft);margin-top:18px;text-align:center;min-height:28px;}
+  .blur{filter:blur(6px);user-select:none;pointer-events:none;}
+  .lock-badge{
+    display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:#fff;
+    font-size:12px;font-weight:600;padding:5px 10px;border-radius:20px;margin-bottom:10px;
+  }
+  .paywall-cta{
+    margin-top:22px;padding:20px;border-radius:14px;
+    background:linear-gradient(180deg,#fff, #FFF6F5);
+    border:1.5px dashed var(--red);
+    text-align:center;
+  }
+  .comp-row{margin-bottom:18px;}
+  .comp-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+  .comp-title{font-weight:600;font-size:14.5px;}
+  .comp-score{font-family:var(--font-display);font-weight:700;color:var(--red);}
+  .comp-bar{height:8px;background:#EDE7D8;border-radius:5px;overflow:hidden;}
+  .comp-bar > div{height:100%;background:var(--red);border-radius:5px;}
+  .comp-comment{font-size:13.5px;color:var(--ink-soft);margin-top:5px;line-height:1.4;}
+  .cols{display:flex;gap:16px;margin-top:22px;}
+  .col{flex:1;background:#FBFAF5;border-radius:12px;padding:14px 16px;}
+  .col h3{font-size:13px;text-transform:uppercase;letter-spacing:.03em;margin:0 0 10px;color:var(--ink-soft);}
+  .col.good h3{color:var(--good);}
+  .col.bad h3{color:var(--red);}
+  .col ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;}
+  .essay-box{
+    margin-top:24px;background:#FFFEFB;border:1.5px solid #E5DFCF;border-radius:12px;
+    padding:20px;font-family:var(--font-body);font-size:15px;line-height:1.85;white-space:pre-wrap;
+  }
+  mark.err{background:none;color:var(--red);text-decoration:underline wavy var(--red);text-underline-offset:3px;font-weight:600;}
+  mark.ok{background:var(--good-soft);color:var(--good);border-radius:3px;padding:0 2px;font-weight:600;}
+  sup{font-family:var(--font-hand);color:var(--red);font-size:13px;}
+  .notes{list-style:none;padding:0;margin:14px 0 0;}
+  .notes li{display:flex;gap:8px;font-size:13.5px;color:var(--ink-soft);padding:6px 0;border-top:1px dashed #E5DFCF;}
+  .notes li b{color:var(--red);font-family:var(--font-hand);font-size:15px;}
+  .top-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .top-nav .brand{font-family:var(--font-hand);font-size:18px;color:var(--red);}
+  .footer-note{font-size:12px;color:var(--ink-soft);text-align:center;margin-top:26px;opacity:.7;}
+  .error-box{background:#FFF3F2;border:1.5px solid var(--red-soft);color:var(--red-dark);padding:14px 16px;border-radius:10px;font-size:14px;margin-top:14px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ---------------------------------------------------------------
+// PROTÓTIPO — Corretor de Redação ENEM (quiz + análise por IA)
+// Paywall está em modo DEMONSTRAÇÃO: o botão libera o resultado
+// direto. Para produção, troque unlockResult() por um redirect
+// para o checkout real (ex: Cakto) e só chame renderResult()
+// depois de confirmar o pagamento (via retorno de URL / webhook).
+// ---------------------------------------------------------------
+
+const QUESTIONS = [
+  {
+    q: "Quantas vezes você já treinou uma redação nota 1000?",
+    options: ["Nunca treinei", "Já tentei, mas travo no meio", "Escrevo bem, quero afinar detalhes", "Não sei nem por onde começar"]
+  },
+  {
+    q: "Qual competência mais te assusta?",
+    options: ["Competência 1 — Gramática e norma culta", "Competência 2 — Repertório sociocultural", "Competência 3 — Argumentação", "Competência 4 — Coesão textual", "Competência 5 — Proposta de intervenção"]
+  },
+  {
+    q: "Qual sua meta de nota na redação?",
+    options: ["Acima de 900", "Entre 800 e 900", "Entre 600 e 800", "Só passar de 600"]
+  },
+  {
+    q: "Quando é sua prova?",
+    options: ["Nas próximas semanas", "Nos próximos meses", "Ano que vem", "Ainda não sei"]
+  },
+  {
+    q: "O que você mais precisa agora?",
+    options: ["Saber minha nota real", "Entender meus erros específicos", "Um plano pra evoluir", "Confiança pro dia da prova"]
+  }
+];
+
+const LOADING_MESSAGES = [
+  "Lendo sua redação com calma...",
+  "Avaliando domínio da norma culta...",
+  "Conferindo o repertório sociocultural...",
+  "Analisando a força dos seus argumentos...",
+  "Checando a coesão entre parágrafos...",
+  "Avaliando sua proposta de intervenção...",
+  "Fechando a correção..."
+];
+
+let state = {
+  screen: 'welcome',
+  quizIndex: 0,
+  answers: [],
+  tema: '',
+  essay: '',
+  analysis: null,
+  error: '',
+  errorDetail: ''
+};
+
+function setState(patch){ state = Object.assign({}, state, patch); render(); }
+function el(id){ return document.getElementById(id); }
+
+function escapeHtml(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ---------- Navegação ----------
+window.startQuiz = function(){ setState({screen:'quiz', quizIndex:0, answers:[]}); };
+
+window.selectAnswer = function(optIndex){
+  const answers = state.answers.concat([QUESTIONS[state.quizIndex].options[optIndex]]);
+  if(state.quizIndex + 1 < QUESTIONS.length){
+    setState({answers, quizIndex: state.quizIndex + 1});
+  } else {
+    setState({answers, screen:'transition'});
+    setTimeout(()=> setState({screen:'essay'}), 2600);
+  }
+};
+
+window.goSubmitEssay = function(){
+  const tema = el('temaInput').value.trim();
+  const essay = el('essayInput').value.trim();
+  const wc = essay ? essay.split(/\s+/).filter(Boolean).length : 0;
+  if(wc < 50){
+    setState({tema, essay, error:'Sua redação precisa ter pelo menos 50 palavras para uma análise completa (atual: ' + wc + ').'});
+    return;
+  }
+  setState({tema, essay, error:'', screen:'analyzing'});
+  analyzeEssay(tema, essay);
+};
+
+window.unlockResult = function(){
+  // DEMO: aqui entraria a confirmação real de pagamento (Cakto etc.)
+  setState({screen:'result'});
+};
+
+window.restart = function(){
+  setState({screen:'welcome', quizIndex:0, answers:[], tema:'', essay:'', analysis:null, error:'', errorDetail:''});
+};
+
+// ---------- Chamada à IA ----------
+// Tenta até 3x automaticamente (com pequeno intervalo) antes de mostrar
+// qualquer erro pro aluno. A tela permanece em "analyzing" durante as
+// tentativas — quem está do outro lado só vê o loading rodando.
+const MAX_ATTEMPTS = 3;
+
+// Como o quiz e o backend agora estão no mesmo domínio, um caminho
+// relativo funciona direto — não precisa editar nada aqui.
+const BACKEND_URL = '/api/analisar-redacao';
+
+async function analyzeEssay(tema, essay, attempt){
+  attempt = attempt || 1;
+
+  try{
+    const response = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tema, essay })
+    });
+    const data = await response.json();
+    if(!response.ok || data.error){
+      throw new Error((data && data.error) || ('Resposta HTTP ' + response.status));
+    }
+    const analysis = data.analysis;
+    if(!analysis || !Array.isArray(analysis.competencias) || analysis.competencias.length < 5){
+      throw new Error('Resposta do backend veio incompleta');
+    }
+    setState({ analysis, screen:'paywall' });
+  } catch(err){
+    console.error('Erro ao analisar redação (tentativa ' + attempt + ' de ' + MAX_ATTEMPTS + '):', err);
+    if(attempt < MAX_ATTEMPTS){
+      setTimeout(() => analyzeEssay(tema, essay, attempt + 1), 900);
+    } else {
+      const detail = (err && err.name ? err.name + ': ' : '') + ((err && err.message) || String(err));
+      setState({ screen:'error', error:'Não consegui analisar sua redação agora.', errorDetail: detail });
+    }
+  }
+}
+
+// ---------- Render ----------
+function render(){
+  const app = el('app') || document.getElementById('app');
+  switch(state.screen){
+    case 'welcome': app.innerHTML = screenWelcome(); break;
+    case 'quiz': app.innerHTML = screenQuiz(); break;
+    case 'transition': app.innerHTML = screenTransition(); break;
+    case 'essay': app.innerHTML = screenEssay(); break;
+    case 'analyzing': app.innerHTML = screenAnalyzing(); startLoadingRotation(); break;
+    case 'paywall': app.innerHTML = screenPaywall(); break;
+    case 'result': app.innerHTML = screenResult(); break;
+    case 'error': app.innerHTML = screenError(); break;
+  }
+}
+
+function topNav(brand){
+  return '<div class="top-nav"><span class="brand">' + brand + '</span></div>';
+}
+
+function screenWelcome(){
+  return topNav('✎ Corretor ENEM') +
+  '<span class="eyebrow">correção nas 5 competências</span>' +
+  '<h1>Quanto vale a sua redação, de verdade?</h1>' +
+  '<p class="lead">Responda 5 perguntas rápidas, cole sua redação e receba uma correção detalhada — competência por competência, do jeito que cai na prova.</p>' +
+  '<div class="card">' +
+    '<button class="btn btn-primary" onclick="startQuiz()">Começar avaliação →</button>' +
+  '</div>' +
+  '<p class="footer-note">5 perguntas rápidas + sua redação = diagnóstico completo</p>';
+}
+
+function screenQuiz(){
+  const total = QUESTIONS.length;
+  const q = QUESTIONS[state.quizIndex];
+  let segs = '';
+  for(let i=0;i<total;i++){
+    const fill = i < state.quizIndex ? '100%' : (i === state.quizIndex ? '60%' : '0%');
+    segs += '<div class="progress-seg"><div style="width:' + fill + '"></div></div>';
+  }
+  let opts = '';
+  q.options.forEach((o,i) => {
+    opts += '<button class="option" onclick="selectAnswer(' + i + ')">' + escapeHtml(o) + '</button>';
+  });
+  return topNav('✎ Corretor ENEM') +
+  '<div class="progress-wrap">' + segs + '</div>' +
+  '<div class="qnum">Pergunta ' + (state.quizIndex+1) + ' de ' + total + '</div>' +
+  '<h2>' + escapeHtml(q.q) + '</h2>' +
+  '<div style="margin-top:18px;">' + opts + '</div>';
+}
+
+function screenTransition(){
+  const foco = state.answers[1] || 'seus principais pontos fracos';
+  const meta = state.answers[2] || 'uma nota melhor';
+  return '<div class="pen-loader">' +
+    '<div class="stamp-wrap"><div class="stamp"><div class="n">✎</div><div class="d">analisando</div></div></div>' +
+    '<h2 style="text-align:center;">Montando seu diagnóstico...</h2>' +
+    '<ul class="checklist" style="max-width:360px;">' +
+      '<li><span class="dot"></span> Perfil identificado: foco em ' + escapeHtml(foco) + '</li>' +
+      '<li><span class="dot"></span> Meta traçada: ' + escapeHtml(meta) + '</li>' +
+      '<li><span class="dot"></span> Preparando tela para colar sua redação</li>' +
+    '</ul>' +
+  '</div>';
+}
+
+function screenEssay(){
+  const errBox = state.error ? '<div class="error-box">' + escapeHtml(state.error) + '</div>' : '';
+  return topNav('✎ Corretor ENEM') +
+  '<h2>Cole sua redação abaixo</h2>' +
+  '<p class="lead">Quanto mais fiel ao texto final, mais precisa é a correção.</p>' +
+  '<label class="field-label">Tema da redação (opcional)</label>' +
+  '<input type="text" id="temaInput" placeholder="Ex: Desafios para a valorização de comunidades tradicionais no Brasil" value="' + escapeHtml(state.tema) + '">' +
+  '<label class="field-label">Sua redação</label>' +
+  '<textarea id="essayInput" placeholder="Cole aqui o texto completo da sua redação...">' + escapeHtml(state.essay) + '</textarea>' +
+  errBox +
+  '<button class="btn btn-primary" style="margin-top:18px;" onclick="goSubmitEssay()">Analisar minha redação</button>';
+}
+
+function screenAnalyzing(){
+  return '<div class="pen-loader">' +
+    '<div class="pen-emoji">✎</div>' +
+    '<div class="loading-msg" id="loadingMsg">' + LOADING_MESSAGES[0] + '</div>' +
+  '</div>';
+}
+
+let loadingInterval = null;
+function startLoadingRotation(){
+  if(loadingInterval) clearInterval(loadingInterval);
+  let i = 0;
+  loadingInterval = setInterval(() => {
+    i = (i+1) % LOADING_MESSAGES.length;
+    const node = el('loadingMsg');
+    if(node) node.textContent = LOADING_MESSAGES[i]; else clearInterval(loadingInterval);
+  }, 1400);
+}
+
+function screenPaywall(){
+  const a = state.analysis;
+  const c1 = a.competencias[0];
+  const fortesPreview = a.pontosFortes[0] || 'seus pontos fortes identificados na correção';
+  return topNav('✎ Corretor ENEM') +
+  '<span class="lock-badge">🔒 correção pronta</span>' +
+  '<h2>Sua redação já foi corrigida!</h2>' +
+  '<p class="lead">Veja uma prévia — o restante da correção está bloqueado.</p>' +
+  '<div class="card">' +
+    '<div class="comp-row">' +
+      '<div class="comp-head"><span class="comp-title">' + escapeHtml(c1.titulo) + '</span><span class="comp-score">' + c1.nota + '/200</span></div>' +
+      '<div class="comp-bar"><div style="width:' + (c1.nota/200*100) + '%"></div></div>' +
+      '<div class="comp-comment">' + escapeHtml(c1.comentario) + '</div>' +
+    '</div>' +
+    '<div class="blur">' +
+      buildCompRow(a.competencias[1]) + buildCompRow(a.competencias[2]) +
+      buildCompRow(a.competencias[3]) + buildCompRow(a.competencias[4]) +
+    '</div>' +
+    '<div class="cols">' +
+      '<div class="col good"><h3>Pontos fortes</h3><ul><li>' + escapeHtml(fortesPreview) + '</li></ul></div>' +
+      '<div class="col bad blur"><h3>Pontos a melhorar</h3><ul><li>bloqueado</li><li>bloqueado</li></ul></div>' +
+    '</div>' +
+    '<div class="paywall-cta">' +
+      '<div style="font-family:var(--font-hand);font-size:22px;color:var(--red);margin-bottom:4px;">nota final bloqueada</div>' +
+      '<p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 14px;">Desbloqueie a nota total, as 5 competências completas e a redação anotada com as correções.</p>' +
+      '<button class="btn btn-primary" onclick="unlockResult()">🔓 Ver resultado completo (modo demonstração)</button>' +
+    '</div>' +
+  '</div>' +
+  '<p class="footer-note">No produto final, este botão leva ao checkout real e só libera após confirmação de pagamento.</p>';
+}
+
+function buildCompRow(c){
+  return '<div class="comp-row">' +
+    '<div class="comp-head"><span class="comp-title">' + escapeHtml(c.titulo) + '</span><span class="comp-score">' + c.nota + '/200</span></div>' +
+    '<div class="comp-bar"><div style="width:' + (c.nota/200*100) + '%"></div></div>' +
+    '<div class="comp-comment">' + escapeHtml(c.comentario) + '</div>' +
+  '</div>';
+}
+
+function screenResult(){
+  const a = state.analysis;
+  let compsHtml = '';
+  a.competencias.forEach(c => { compsHtml += buildCompRow(c); });
+
+  let fortesHtml = '', fracosHtml = '';
+  (a.pontosFortes||[]).forEach(p => fortesHtml += '<li>' + escapeHtml(p) + '</li>');
+  (a.pontosFracos||[]).forEach(p => fracosHtml += '<li>' + escapeHtml(p) + '</li>');
+
+  // Anotações sobre o texto original
+  let essayEscaped = escapeHtml(state.essay);
+  let notesHtml = '';
+  (a.anotacoes||[]).forEach((n, idx) => {
+    const trechoEsc = escapeHtml(n.trecho || '');
+    if(trechoEsc && essayEscaped.indexOf(trechoEsc) !== -1){
+      const cls = n.tipo === 'elogio' ? 'ok' : 'err';
+      const marked = '<mark class="' + cls + '">' + trechoEsc + '<sup>' + (idx+1) + '</sup></mark>';
+      essayEscaped = essayEscaped.replace(trechoEsc, marked);
+    }
+    notesHtml += '<li><b>' + (idx+1) + '.</b> ' + escapeHtml(n.comentario || '') + '</li>';
+  });
+
+  return topNav('✎ Corretor ENEM') +
+  '<div class="stamp-wrap"><div class="stamp"><div class="n">' + a.notaTotal + '</div><div class="d">/ 1000</div></div></div>' +
+  '<h2 style="text-align:center;">Correção completa</h2>' +
+  '<div class="card">' +
+    compsHtml +
+    '<div class="cols">' +
+      '<div class="col good"><h3>Pontos fortes</h3><ul>' + fortesHtml + '</ul></div>' +
+      '<div class="col bad"><h3>Pontos a melhorar</h3><ul>' + fracosHtml + '</ul></div>' +
+    '</div>' +
+  '</div>' +
+  '<h2 style="margin-top:28px;">Sua redação anotada</h2>' +
+  '<div class="essay-box">' + essayEscaped + '</div>' +
+  '<ul class="notes">' + notesHtml + '</ul>' +
+  '<button class="btn btn-ghost" style="margin-top:26px;" onclick="restart()">Analisar outra redação</button>';
+}
+
+function screenError(){
+  const detail = state.errorDetail ? '<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12.5px;color:var(--ink-soft);">Detalhes técnicos</summary><pre style="white-space:pre-wrap;font-size:12px;background:#F3EFE3;border-radius:8px;padding:10px;margin-top:6px;color:var(--ink-soft);font-family:monospace;">' + escapeHtml(state.errorDetail) + '</pre></details>' : '';
+  return topNav('✎ Corretor ENEM') +
+  '<h2>Algo não saiu como esperado</h2>' +
+  '<div class="error-box">' + escapeHtml(state.error) + detail + '</div>' +
+  '<button class="btn btn-primary" style="margin-top:18px;" onclick="setState({screen:\'essay\', errorDetail:\'\'})">Tentar novamente</button>';
+}
+
+render();
+</script>
+</body>
+</html>

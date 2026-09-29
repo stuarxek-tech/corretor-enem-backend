@@ -10,7 +10,10 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.6",
+    "express": "^4.22.2"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
   }
 }
